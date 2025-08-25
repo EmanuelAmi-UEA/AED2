@@ -1,0 +1,44 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build ParteA.cpp",
+            "type": "shell",
+            "command": "C:/msys64/ucrt64/bin/c++.exe",
+            "args": [
+                "-Wall",
+                "-Wextra",
+                "-g3",
+                "${workspaceFolder}/ParteA.cpp",
+                "-o",
+                "${workspaceFolder}/output/ParteA.exe"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Run ParteA.exe",
+            "type": "shell",
+            "command": "${workspaceFolder}/output/ParteA.exe",
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ,
+        {
+            "label": "Build and Run",
+            "dependsOn": ["Build ParteA.cpp", "Run ParteA.exe"],
+            "dependsOrder": "sequence"
+        }
+    ]
+}
