@@ -29,7 +29,7 @@ public:
 
 void GraphAL::add_edge(const Vertex u, const Vertex v) {
     if (u >= num_vertices || v >= num_vertices || u == v) {
-        throw std::invalid_argument("Parâmetros inválidos");
+        throw std::invalid_argument("Invalid parameters");
     }
     adj[u].push_back(v);
     adj[v].push_back(u);
@@ -38,7 +38,7 @@ void GraphAL::add_edge(const Vertex u, const Vertex v) {
 
 std::list<Vertex> GraphAL::get_adj(Vertex u) const {
     if (u >= num_vertices) {
-        throw std::invalid_argument("Parâmetro inválido");
+        throw std::invalid_argument("Invalid parameter");
     }
     return adj[u];
 }
@@ -67,7 +67,7 @@ int main() {
         try {
             graph.add_edge(u, v);
         } catch (const std::exception& e) {
-            std::cerr << "Erro ao adicionar aresta {" << u << ", " << v << "}: " << e.what() << std::endl;
+            std::cerr << "Error adding edge {" << u << ", " << v << "}: " << e.what() << std::endl;
         }
     }
     Print_Adjacency_List(graph);
