@@ -1,9 +1,7 @@
 #include <iostream>
-#include <vector>
 #include <list>
 #include <utility>
 #include <stdexcept>
-#include <algorithm>
 
 using uint = unsigned int;
 using Vertex = uint;
@@ -17,7 +15,7 @@ private:
     std::list<VertexWeightPair>* adj;
 
     bool is_valid_vertex(Vertex v) const {
-        return (v >= 0 && v < num_vertices);
+        return (v < num_vertices);
     }
 
 public:
@@ -34,7 +32,7 @@ public:
 
     void add_edge(Vertex u, Vertex v, Weight w) {
         if (!is_valid_vertex(u) || !is_valid_vertex(v) || u == v) {
-            throw std::invalid_argument("Invalid vertices or a loop edge.");
+            throw std::invalid_argument("Vertices invalidos ou laco.");
         }
 
         adj[u].push_back(std::make_pair(v, w));
@@ -43,26 +41,29 @@ public:
         num_edges++;
     }
 
-    const std::list<VertexWeightPair>& get_adj(Vertex u) const {
-        if (!is_valid_vertex(u)) {
-            throw std::invalid_argument("Invalid vertex.");
+    void remove_edge(Vertex u, Vertex v) {
+        if (!is_valid_vertex(u) || !is_valid_vertex(v) || u == v) {
+            throw std::invalid_argument("Vertices invalidos para remocao.");
         }
-        return adj[u];
+        
+        auto original_size = adj[u].size();
+        adj[u].remove_if([v](const VertexWeightPair& pair) {
+            return pair.first == v;
+        });
+
+        if (adj[u].size() < original_size) {
+            adj[v].remove_if([u](const VertexWeightPair& pair) {
+                return pair.first == u;
+            });
+            num_edges--;
+        }
     }
 
-    Weight get_weight(Vertex u, Vertex v) const {
-        if (!is_valid_vertex(u) || !is_valid_vertex(v)) {
-            throw std::invalid_argument("Invalid vertices.");
+    const std::list<VertexWeightPair>& get_adj(Vertex u) const {
+        if (!is_valid_vertex(u)) {
+            throw std::invalid_argument("Vertice invalido.");
         }
-
-        const auto& pares_vw = get_adj(u);
-
-        for (const auto& p : pares_vw) {
-            if (p.first == v) {
-                return p.second;
-            }
-        }
-        throw std::runtime_error("Edge not found.");
+        return adj[u];
     }
 
     uint get_num_vertices() const {
@@ -89,7 +90,6 @@ void PrintAdjacencyList(const WeightedGraphAL& g) {
 
 int main() {
     uint n, m;
-
     std::cin >> n >> m;
 
     WeightedGraphAL graph(n);
