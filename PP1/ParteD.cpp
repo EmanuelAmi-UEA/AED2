@@ -32,7 +32,8 @@ class WeightedGraphAM{
       adj[v][u] = w;
       num_edges++;
     }
-
+    uint get_num_vertices( )const {return num_vertices;}
+    uint get_num_edges ()const {return num_edges; } 
     std::list<Vertex> get_adj(const Vertex& u)const{
       if (u >=num_vertices){
         throw std::invalid_argument("Vertice inválido para getadj!");
@@ -62,6 +63,8 @@ class WeightedGraphAM{
 };
 
 void print_adjacency_matrix(const WeightedGraphAM& g){
+  std::cout <<"num vertices: " << g.get_num_vertices()<<std::endl;
+  std::cout <<"num edges: " <<g.get_num_edges()<<std::endl;
   const auto& adj = g.get_adj_matrix();
 
   for (const auto& linha:adj){

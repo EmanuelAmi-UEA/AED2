@@ -3,7 +3,6 @@
 #include <list>
 #include <stdexcept>
 
-
 using uint = unsigned int;
 using Vertex = unsigned int;
 using Weight = unsigned int;
@@ -15,92 +14,75 @@ private:
     std::vector<std::vector<Weight>> adj;
 
 public:
+    GraphAM(uint num_vertices)
+        : num_vertices(num_vertices), num_edges(0), adj(num_vertices, std::vector<Weight>(num_vertices, 0)) {}
 
-    GraphAM(uint num_vertices) : num_vertices(num_vertices), num_edges(0), adj(num_vertices, std::vector<Weight>(num_vertices, 0)) {}
+    ~GraphAM() {}
 
-
-    ~GraphAM() {} // Não é necessário desalocar, Container STL libera automaticamente.
-
-
-    void GraphAM::add_edge(const Vertex& u,const Vertex& v) {
+    void add_edge(const Vertex& u, const Vertex& v) {
         if (u >= num_vertices || v >= num_vertices || u == v) {
             throw std::invalid_argument("Argumentos de vértice inválidos.");
-            return;
         }
-        adj[u][v] = 1;
-        adj[v][u] = 1; 
-        num_edges++;
-        /*
-        if (adj[u][v] != 0) {
-            std::cout << "Aresta já existe!\n";
-            return;
+        if (!edge_exists(u, v)) {
+            adj[u][v] = 1;
+            adj[v][u] = 1;
+            num_edges++;
         }
-        */
+    }
+    uint get_num_edges () const {return num_edges;}
+    uint get_num_vertices() const { return num_vertices; }
+
+    std::vector<std::vector<uint>> get_adj_matrix() const {
+        return adj;
     }
 
-    uint GraphAM::get_num_vertices ()const {return num_vertices;};
-
-    std::list<Vertex> GraphAM::get_adj(Vertex u) const {
-      if (u >= num_vertices) throw std::invalid_argument("Vértice inválido");
-      std::list<Vertex> l;
-        for (Vertex v = 0; v < num_vertices; ++v) {
-            if (adj[u][v] != 0) {
-                l.push_back(v);
-            }
-        }
-        return l;
+    bool edge_exists(const Vertex& u, const Vertex& v) const {
+        return adj[u][v] != 0;
     }
-
-    std::vector<std::vector<uint>> GraphAM::get_adj_matrix() const{
-      return adj;
-    }
-    
-    void GraphAM::print_adjacency_matrix(const GraphAM& g) const{
-        auto adj_matrix = g.get_adj_matrix();
-        auto n = g.get_num_vertices();
-
-        for(int i =0 ;i < n ;i++){
-            for(int j =0 ;j<n;j++){
-                std::cout << adj_matrix[i][j] << " ";
+};
+ void print_adjacency_matrix(GraphAM g){
+    uint num_vertices = g.get_num_vertices();
+    std::cout << "num vertices: " << num_vertices;
+    uint num_edges = g.get_num_edges();
+    std::vector<std::vector<Weight>> adj = g.get_adj_matrix();
+        for (uint i = 0; i < num_vertices; i++) {
+            for (uint j = 0; j < num_vertices; j++) {
+                std::cout << adj[i][j] << " ";
             }
             std::cout << "\n";
         }
-
-
     }
-    bool GraphAM::edge_exists(const Vertex& u , const Vertex& v){
-        std::cout << "Vétice já existe!";
-        if (adj[v][u] !=0){ return true;}
-    }
-    
-};
 
-int main () {
+   
+int main() {
+    uint n = 0, m = 0;
+    std::cout << "Entre com n e m: ";
+    std::cin >> n >> m;
 
-    uint n = 0;
-    uint m =0;
+    GraphAM graph(n);
 
-    std::cout << "Entre com a ordem do grafo: " << std::endl;
-    std::cin >> n;
-    std::cout <<"Entre com o número de arestas: " << std::endl;
-    std::cin >> m;
-
-    GraphAM graph = GraphAM(n);
-
-    uint u =0;
-    uint v =0;
-
-    for (int i =0;i<n;i++){
-        std::cout<< "Vertice " << i+1 << std::endl;
-        do{
-            std::cout << "Valor u:" << std::endl;
+    for (uint i = 0; i < m; i++) {
+        uint u = 0, v = 0;
+        do {
+            std::cout << "Aresta " << i + 1 << "\n";
+            std::cout << "Valor u: ";
             std::cin >> u;
-            std::cout << "Valor v:" << std::endl;
+            std::cout << "Valor v: ";
             std::cin >> v;
-        }while(graph.edge_exists(u,v));
-    
+
+            if (graph.edge_exists(u, v)) {
+                std::cout << "Aresta já existe!\n";
+            }
+        } while (graph.edge_exists(u, v));
+
+        try {
+            graph.add_edge(u, v);
+        } catch (const std::invalid_argument& e) {
+            std::cerr << "Erro ao adicionar aresta: " << e.what() << "\n";
+            i--; 
+        }
     }
-    graph.print_adjacency_matrix(graph);
+    print_adjacency_matrix(graph);
 
     return 0;
 }
