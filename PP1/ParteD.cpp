@@ -27,6 +27,11 @@
         if (u >=num_vertices || v >= num_vertices || u==v){
           throw std::invalid_argument("Vertices invalidos!");
         }
+          if (adj[u][v] != std::numeric_limits<Weight>::infinity()) {
+        adj[u][v] = w;
+        adj[v][u] = w;
+        return;
+    }
 
         adj[u][v] = w;
         adj[v][u] = w;
