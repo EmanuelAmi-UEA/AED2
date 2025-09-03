@@ -106,8 +106,10 @@ class BFS{
 
     const std::vector<Vertex>& get_pred() const{return *pred;}
 };
-std::vector<std::string> parse_input(const std::string& input){
-  // Recebe o input e devolve um vetor com as posições parseado
+
+
+std::vector<std::string> treat_input(const std::string& input){
+  // Recebe o input e devolve um vetor com posicoes
   std::vector<std::string>result;
   std::istringstream iss(input);
   std::string word;
@@ -119,14 +121,52 @@ std::vector<std::string> parse_input(const std::string& input){
   return result;
 
 }
+GraphAL build_chess_graph(){
+  GraphAL c(64); // Grafo 8x8
+  int mov_x[8] = {-2,-2,-1,-1,1,1,2,2};  // Exemplo: (-2  -> 2 para cima, -1 -> 1 para esquerda) (linha,coluna) sendo que a linha (0,0) está em A1
+  int mov_y[8] = {-1,1,-2,2,-2,2,-1,1}; //  Pares de movimentos possíveis para um cavaleiro.
 
+  for(int i =0; i< 8;i++){
+    for(int j = 0; j<8 ; j++){
+      int u = i*8 +j;
+      for(int k =0;k<8; k++){
+        int ni = i + mov_x[k]; // Usa indice k para selecionar movimentos válidos
+        int nj = j + mov_y[k]; 
+        if( ni >=0 && ni <8 && nj >=0 && nj <8){
+          int v = ni*8 + nj;
+          c.add_edge(u,v);
+        }
+      }
+    }
+
+  }
+  return c;
+}
+std::vector<int> chess_to_matrix_notation(const std::string& position){
+  std::string lines = "abcdefgh";
+  std::string cols = "12345678";
+
+  int i = lines.find(position[0]);
+  int j = cols.find(position[1]);
+
+  return {i,j};
+
+}
 int main() {
   std::string input;
   std::getline(std::cin,input);
-  std::vector<std::string> result = parse_input(input);
+  std::vector<std::string> result = treat_input(input);
   std::cout <<"Dentro do vector: "<< std::endl;
   for(int i =0; i<result.size();i++){
     std::cout<<result[i]<<std::endl;
+  }
+  for(auto& v: result){
+    auto mn = chess_to_matrix_notation(v);
+    std::cout<< "xadrez: "<< v;
+    std::cout<< " matriz: ";
+    for(int i:mn){
+      std::cout << i << ", ";
+    }
   }
   return 0;
 };
