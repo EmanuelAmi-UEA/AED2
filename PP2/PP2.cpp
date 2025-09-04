@@ -3,25 +3,12 @@
 #include <vector>
 #include <string>
 #include <sstream>
-/*
 
-class Graph {...}; // Deixa o Grafo do jeito que está.
 
-class BFS {
-  Graph g;
-  std::vector<int> pred;
-  std::vector<Color> color;
-  std::vector<uint> dist;
-  // Orientada a Objetos.
-  processBFS(){
-
-  }
-};
-*/
-// Grafo com lista de adjacência implementado!
 using uint =unsigned int;
 using Vertex = unsigned int;
 using Color = char;
+
 class GraphAL {
   private:
     uint num_vertices;
@@ -61,19 +48,16 @@ class GraphAL {
 class BFS{
   private:
       const GraphAL& g; // Recebe o Grafo de Lista de Adjacência
-      std::vector<Color>* color; // Cor (w (white)= undiscovered, g (grey)= discovered but not explored, b (black) = explored)
-      std::vector<Vertex>* pred; // Lista de predecessores 
+      std::vector<Color> color; // Cor (w (white)= undiscovered, g (grey)= discovered but not explored, b (black) = explored)
+      std::vector<int> pred; // Lista de predecessores 
+      std::vector<int> dist; // Distancias
 
 
   public:
-      BFS(const GraphAL& g):g(g) {
-        this -> color = new std::vector<Color>(g.get_num_vertices(),'w'); 
-        this -> pred = new std::vector<Vertex>(g.get_num_vertices(),-1); 
-      }
+      BFS(const GraphAL& g):g(g),color(g.get_num_vertices(),'w'),pred(g.get_num_vertices(),-1),dist(g.get_num_vertices(),-1) {}
 
     ~BFS(){
-      delete color;
-      delete pred;  // Destrutor da Classe BFS desaloca Color e Predecessor.
+      // Destrutor da Classe BFS vazio
     }
 
     void traverse (Vertex start){
@@ -82,31 +66,57 @@ class BFS{
       }
 
       std::list<Vertex> q; // std::list como fila
-      (*color)[start]='g';
+      color[start]='g';
+      dist[start] = 0;
       q.push_back(start); // Adiciona ao fim da fila
       
       while (!q.empty()){
         Vertex u = q.front(); // Pega o elemento 0 
         q.pop_front(); // Remove o elemento 0
-        std::cout << "Visitado: " << u << std::endl;
 
         for(const Vertex& v : g.get_adj(u)){
-          if((*color)[v]=='w'){
-            (*color)[v]='g';
-            (*pred)[v] = u;
+          if(color[v]=='w'){
+            color[v]='g';
+            pred[v] = u;
+            dist[v] = dist[u] + 1;
             q.push_back(v); // Adiciona no final da fila
           }
         }
-        (*color)[u] ='b'; // Marca como explorado (black)
+        color[u] ='b'; // Marca como explorado (black)
 
 
       }
 
     }
 
-    const std::vector<Vertex>& get_pred() const{return *pred;}
+    const std::vector<int>& get_pred() const{return pred;}
+    const std::vector<int>& get_dist() const{return dist;}
 };
+// Classe cavaleiro;
+class Knight{
+  private:
+    std::vector<int> s;  // Posicao inicial
+    std::vector<int> goal; // Posicao do rei
+    int d; // Menor Distancia;
+  public:
 
+    Knight(std::vector<int> s, std::vector<int> goal): s(s),goal(goal),d(-1){};
+
+    ~Knight(){} // Sem necessidade de desalocar manualmente.
+
+    int get_distance () {return d;}
+
+    void calculate_distance(const GraphAL& g){
+      int start = s[0]*8 + s[1];
+      int target = goal[0]*8 + goal[1];
+
+      BFS bfs(g);
+      bfs.traverse(start);
+
+      d = bfs.get_dist()[target];
+    }
+
+};
 
 std::vector<std::string> treat_input(const std::string& input){
   // Recebe o input e devolve um vetor com posicoes
@@ -120,7 +130,7 @@ std::vector<std::string> treat_input(const std::string& input){
 
   return result;
 
-}
+};
 GraphAL build_chess_graph(){
   GraphAL c(64); // Grafo 8x8
   int mov_x[8] = {-2,-2,-1,-1,1,1,2,2};  // Exemplo: (-2  -> 2 para cima, -1 -> 1 para esquerda) (linha,coluna) sendo que a linha (0,0) está em A1
@@ -134,14 +144,16 @@ GraphAL build_chess_graph(){
         int nj = j + mov_y[k]; 
         if( ni >=0 && ni <8 && nj >=0 && nj <8){
           int v = ni*8 + nj;
-          c.add_edge(u,v);
+          if(u<v) {
+            c.add_edge(u,v);
+          }
         }
       }
     }
 
   }
   return c;
-}
+};
 std::vector<int> chess_to_matrix_notation(const std::string& position){
   std::string lines = "abcdefgh";
   std::string cols = "12345678";
@@ -151,22 +163,25 @@ std::vector<int> chess_to_matrix_notation(const std::string& position){
 
   return {i,j};
 
-}
+};
+
 int main() {
   std::string input;
-  std::getline(std::cin,input);
-  std::vector<std::string> result = treat_input(input);
-  std::cout <<"Dentro do vector: "<< std::endl;
-  for(int i =0; i<result.size();i++){
-    std::cout<<result[i]<<std::endl;
+  std::getline(std::cin,input); // Input
+  std::vector<std::string> result = treat_input(input); // Transforma o Input
+
+  GraphAL g = build_chess_graph(); // Nosso tabuleiro com os movimentos válidos para um cavaleiro.
+
+  std::vector<Knight> knights; // Vetor de cavaleiros
+  for(int i =0;i< 4;i++){
+    Knight k(chess_to_matrix_notation(result[i]),chess_to_matrix_notation(result[4]));  
+    k.calculate_distance(g);
+    knights.push_back(k);
   }
-  for(auto& v: result){
-    auto mn = chess_to_matrix_notation(v);
-    std::cout<< "xadrez: "<< v;
-    std::cout<< " matriz: ";
-    for(int i:mn){
-      std::cout << i << ", ";
-    }
+
+  for(int i =0;i<knights.size();i++){
+    std::cout <<"Knight " << i+1 << " -> distância até o rei: " << knights[i].get_distance() <<std::endl;
+  
   }
   return 0;
 };
