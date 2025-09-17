@@ -88,7 +88,7 @@ class PriorityQueue{
 
   int size() const {return heap.size();}
 
-
+  // TO DO: implementar Heap binario minimo
 
   
 };
