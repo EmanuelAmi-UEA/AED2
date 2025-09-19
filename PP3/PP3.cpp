@@ -3,11 +3,17 @@
 #include <stdexcept>
 #include <list>
 #include <utility>
+#include <unordered_map>
 
+using uint = unsigned int;
+using Vertex = uint;
+using Weight = float;
+using VertexWeightPair = std::pair<Vertex, Weight>;
 
 class PriorityQueue{
   private:
-    std::vector<int> heap;
+    std::vector<std::pair<Weight,Vertex>>heap; // Lista que guarda o par Peso, vertice
+    std::unordered_map<Vertex,int>pos; //mapeiamento de vertice -> indice
 
     int get_parent(int i){return (i-1)/2; } // int e um tipo leve e primitivo nao necessita o uso de referencias constantes (const)
     int get_left_child(int i) {return 2*i + 1;}
@@ -49,42 +55,38 @@ class PriorityQueue{
       build_min_heap(); // Inicializa a FP e ordena em heap instantaneamente.
     }
 
-    void insert(int key){
+    void insert(const std::pair<Weight,Vertex>& key){
       heap.push_back(key);
       heapify_up(heap.size()-1);
     }
 
-    int minimum() const{
+    std::pair<Weight,Vertex> minimum() const{
       if (heap.empty()){
         throw std::runtime_error("A Fila de Prioridade esta vazia!");
       }
       return heap[0];
     }
     
-    int extract_min(){
+    std::pair<Weight,Vertex> extract_min(){
       if(heap.empty()){
         throw std::runtime_error("A Fila de Prioridade esta vazia!");
       }
-      int max_value = heap[0];
+      auto min_value = heap[0];
       heap[0] = heap.back();
       heap.pop_back();
       if (!heap.empty()){
         min_heapify(0,heap.size());
       }
-      return max_value;
+      return min_value;
     }
-  void decrease_key(int i, int new_key){
-    if (i<0 || i>= (int)heap.size()){
-      throw std::out_of_range("Indice fora de alcance!");
-
-    }
-    if (new_key > heap[i]){
-      throw std::invalid_argument("Nova chave e menor que chave atual!");
-
-    }
-    heap[i] = new_key;
-    heapify_up(i);
-
+    void decrease_key(Vertex v, Weight new_dist) {
+      if (pos.find(v) == pos.end()) return; // vertice não está mais no heap
+      int i = pos[v];
+      if (new_dist > heap[i].first) {
+          throw std::invalid_argument("Nova chave maior que a atual!");
+      }
+      heap[i].first = new_dist;
+      heapify_up(i);
   }
 
   bool empty () const { return heap.empty();}
@@ -96,14 +98,9 @@ class PriorityQueue{
   
 };
 
-
-using uint = unsigned int;
-using Vertex = uint;
-using Weight = float;
-using VertexWeightPair = std::pair<Vertex, Weight>;
-
-class WeightedGraphAL {
-private:
+// Grafo bidirecionado com pesos
+class WeightedGraphAL{
+  private:
     uint num_vertices;
     uint num_edges;
     std::list<VertexWeightPair>* adj;
@@ -112,7 +109,7 @@ private:
         return (v < num_vertices);
     }
 
-public:
+  public:
     WeightedGraphAL(uint num_vertices) {
         this->num_vertices = num_vertices;
         this->num_edges = 0;
@@ -203,8 +200,42 @@ void PrintAdjacencyList(const WeightedGraphAL& g) {
     }
 }
 
+bool relax(Vertex u, Vertex v, Weight w, std::vector<Weight>& dist, std::vector<Vertex>& pred) {
+  // Relaxamento   
+  if (dist[u] + w < dist[v]) {
+        dist[v] = dist[u] + w;
+        pred[v] = u;
+        return true;
+    }
+    return false;
+}
+std::vector<Weight> dijkstra(const WeightedGraphAL& g, Vertex source) {
+    uint n = g.get_num_vertices();
+    std::vector<Weight> dist(n, std::numeric_limits<Weight>::infinity());
+    std::vector<Vertex> pred(n, -1);
+
+    PriorityQueue pq;
+
+    // inicializa todos os vertices na fila
+    for (Vertex u = 0; u < n; u++) {
+        if (u == source) dist[u] = 0.0;
+        pq.insert({dist[u], u});
+    }
+
+    while (!pq.empty()) {
+        auto [d, u] = pq.extract_min();
+
+        for (const auto& [v, w] : g.get_adj(u)) {
+            if (relax(u, v, w, dist, pred)) {
+                pq.decrease_key(v, dist[v]);
+            }
+        }
+    }
+    return dist;
+}
+
 int main() {
   std::cout << "Hello world!";
-
+  // TO DO : Formatar a entrada para formar o Grafo 
   return 0;
 }
