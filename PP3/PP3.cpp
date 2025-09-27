@@ -2,19 +2,33 @@
 #include <vector>
 #include <list>
 #include <limits>
+#include <string> 
 
 using uint = unsigned int;
 
+// -------------------- Estrutura de Posicao --------------------
+// Representa uma posicao no tabuleiro
+// Pode ser convertida para notacao de xadrez (ex: a1, b2)
+// ou convertida de notacao de xadrez para coordenadas
 struct Position {
     int row, col;
     bool operator==(const Position& o) const { return row == o.row && col == o.col; }
     std::string toChess() const { return std::string(1, 'a' + col) + std::to_string(row + 1); }
+
     static Position fromChess(const std::string& s) {
-        return {std::stoi(s.substr(1)) - 1, s[0] - 'a'};
+        if(s.size() < 2) return {0, 0}; // conversao simples de seguranca
+        int col = s[0] - 'a';
+        int row = std::stoi(s.substr(1)) - 1;
+        return {row, col};
     }
+
+    // Converte indice linear para linha e coluna
     static Position fromIndex(int i, int size) { return {i / size, i % size}; }
 };
 
+// -------------------- Estrutura de Exercito --------------------
+// Cada exercito tem uma cor, posicao inicial e inimigos declarados
+// Possui contadores de movimentos, peso do caminho e estado de atividade
 class Army {
 public:
     std::string color;
@@ -23,18 +37,21 @@ public:
     int delay = 0, moves = 0, weight = 0;
     bool active = true, reached = false;
 
-    Army(std::string c, Position p, std::vector<std::string> e) :
+    Army(const std::string& c, Position p, const std::vector<std::string>& e) :
         color(c), pos(p), originalPos(p), enemies(e) {}
 
+    // Verifica se uma cor eh inimiga
     bool isEnemy(const std::string& c) const {
-        for(auto& e : enemies) if(e == c) return true;
+        for(const auto& e : enemies) if(e == c) return true;
         return false;
     }
 };
 
+// -------------------- Estrutura de Heap Minimo --------------------
+// Usada pelo algoritmo de Dijkstra para escolher proximo vertice
 class MinHeap {
 private:
-    std::vector<std::pair<int, uint>> heap;
+    std::vector<std::pair<int, uint>> heap; // (distancia, vertice)
 
     int parent(int i) const { return (i-1)/2; }
     int left(int i) const { return 2*i+1; }
@@ -75,6 +92,10 @@ public:
     bool empty() const { return heap.empty(); }
 };
 
+// -------------------- Estrutura de Grafo --------------------
+// Representa o tabuleiro como grafo com pesos nas arestas
+// Cada celula eh um vertice
+// Movimentos possiveis sao os do cavalo do xadrez
 class Graph {
 private:
     int size;
@@ -99,16 +120,18 @@ public:
     uint vertexCount() const { return size * size; }
     int getSize() const { return size; }
 
+    // Funcao para calcular peso da aresta entre duas posicoes
     int weight(Position a, Position b) const {
-        std::string u = a.toChess(), v = b.toChess();
-        int alpha_u = u[0], beta_u = std::stoi(u.substr(1));
-        int alpha_v = v[0], beta_v = std::stoi(v.substr(1));
+        int alpha_u = a.col + 'a';
+        int beta_u  = a.row + 1;
+        int alpha_v = b.col + 'a';
+        int beta_v  = b.row + 1;
         return (alpha_u * beta_u + alpha_v * beta_v) % 19;
     }
 
+    // Gera todos os movimentos de cavalo no tabuleiro
     void genMoves() {
         int knightMoves[8][2] = {{2,1},{2,-1},{-2,1},{-2,-1},{1,2},{1,-2},{-1,2},{-1,-2}};
-
         for(int r = 0; r < size; r++) {
             for(int c = 0; c < size; c++) {
                 Position from = {r, c};
@@ -124,9 +147,11 @@ public:
     }
 };
 
+// -------------------- Algoritmo de Dijkstra --------------------
+// Calcula menor caminho entre duas posicoes no grafo
 class DijkstraSolver {
 public:
-    std::vector<Position> findPath(Graph& g, Position start, Position target) {
+    std::vector<Position> findPath(const Graph& g, Position start, Position target) {
         uint n = g.vertexCount();
         int boardSize = g.getSize();
         std::vector<int> dist(n, std::numeric_limits<int>::max());
@@ -140,13 +165,17 @@ public:
         dist[startIdx] = 0;
         pq.insert(0, startIdx);
 
+        if(startIdx == targetIdx) {
+            return {start};
+        }
+
         while(!pq.empty()) {
             auto [d, u] = pq.extractMin();
             if(d == -1) break;
             if(d > dist[u]) continue;
             if(u == targetIdx) break;
 
-            for(auto& [v, w] : g.getNeighbors(u)) {
+            for(const auto& [v, w] : g.getNeighbors(u)) {
                 if(dist[u] + w < dist[v]) {
                     dist[v] = dist[u] + w;
                     pred[v] = u;
@@ -164,7 +193,8 @@ public:
         return path;
     }
 
-    int pathWeight(const std::vector<Position>& path, Graph& g) {
+    // Calcula peso total de um caminho
+    int pathWeight(const std::vector<Position>& path, const Graph& g) const {
         if(path.size() < 2) return 0;
         int total = 0;
         for(uint i = 0; i < path.size()-1; i++) {
@@ -174,6 +204,9 @@ public:
     }
 };
 
+// -------------------- Simulacao da Guerra --------------------
+// Gerencia exercitos, castelo e tempestades
+// Executa turnos de movimento aplicando as regras
 class WarSimulation {
 private:
     Graph graph;
@@ -189,8 +222,8 @@ private:
         return nullptr;
     }
 
-    bool hasStormAt(Position p) {
-        for(auto& s : storms) {
+    bool hasStormAt(Position p) const {
+        for(const auto& s : storms) {
             if(s == p) return true;
         }
         return false;
@@ -205,9 +238,9 @@ private:
         }
     }
 
-    int countAlliesAt(Position p) {
+    int countAlliesAt(Position p) const {
         int count = 0;
-        for(auto& a : armies) {
+        for(const auto& a : armies) {
             if(a.pos == p && a.active) count++;
         }
         return count;
@@ -218,14 +251,16 @@ public:
         graph.genMoves();
     }
 
-    void addArmy(std::string c, Position p, std::vector<std::string> e) {
-        armies.push_back(Army(c, p, e));
+    void addArmy(const std::string& c, Position p, const std::vector<std::string>& e) {
+        armies.emplace_back(c, p, e);
     }
 
     void setCastle(Position p) { castle = p; }
     void addStorm(Position p) { storms.push_back(p); }
 
+    // Executa simulacao de varios turnos ate achar vencedores
     void simulate() {
+        // Calcula movimentos e pesos iniciais de cada exercito
         for(auto& a : armies) {
             auto path = dijkstra.findPath(graph, a.originalPos, castle);
             if(!path.empty()) {
@@ -237,6 +272,7 @@ public:
         std::vector<Army*> winners;
         int maxRounds = 100;
 
+        // Executa turnos de movimento
         for(int round = 1; round <= maxRounds && winners.empty(); round++) {
             for(auto& army : armies) {
                 if(!army.active || army.reached || army.delay > 0) {
@@ -249,12 +285,14 @@ public:
 
                 Position nextMove = path[1];
                 Army* otherArmy = findArmyAt(nextMove);
-                bool hasStorm = hasStormAt(nextMove);
+                bool stormHere = hasStormAt(nextMove);
 
                 if(otherArmy != nullptr) {
+                    // Caso de inimigo bloqueando
                     if(army.isEnemy(otherArmy->color)) continue;
                     else army.pos = nextMove;
-                } else if(hasStorm) {
+                } else if(stormHere) {
+                    // Caso de tempestade
                     int allyCount = countAlliesAt(army.pos);
                     if(allyCount >= 2) {
                         army.pos = nextMove;
@@ -276,6 +314,7 @@ public:
             }
         }
 
+        // Ordena vencedores por cor
         for(uint i = 0; i < winners.size(); i++) {
             for(uint j = i+1; j < winners.size(); j++) {
                 if(winners[i]->color > winners[j]->color) {
@@ -284,6 +323,7 @@ public:
             }
         }
 
+        // Imprime resultado final
         for(uint i = 0; i < winners.size(); i++) {
             std::cout << winners[i]->color << " " << winners[i]->moves << " " << winners[i]->weight;
             if(i < winners.size() - 1) std::cout << " ";
@@ -292,6 +332,8 @@ public:
     }
 };
 
+// -------------------- Programa Principal --------------------
+// Le entrada, configura simulacao e executa
 int main() {
     int boardSize;
     std::cin >> boardSize;
@@ -300,7 +342,7 @@ int main() {
 
     int numArmies;
     std::cin >> numArmies;
-    std::cin.ignore();
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
     for(int i = 0; i < numArmies; i++) {
         std::string line;
