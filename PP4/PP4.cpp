@@ -5,8 +5,10 @@
 #include <limits>
 #include <numeric>
 #include <unordered_map>
-#include <sstream>
+#include <cctype>
+#include <cstdlib>
 
+const int MAX_LINE = 200;
 using uint = unsigned int;
 
 // -------------------- Struct de Aresta --------------------
@@ -22,13 +24,14 @@ struct Edge {
 // -------------------- Union-Find --------------------
 // TAD para criacao de Conjuntos(Sets)
 class UnionFind {
+    // IMPORTANTE : REFATORAR PARA NAO USAR STD::UNORDERED_MAP
 private:
     std::unordered_map<int, int> parent; // mapeia cada elemento para seu pai
     std::unordered_map<int, int> rank;   // aproximacao da altura da arvore
 
 public:
     // MAKE-SET(x): cria um conjunto com x como unico representante
-    void MAKE_SET(int x) {
+    void makeSet(int x) {
         if (parent.find(x) == parent.end()) {
             parent[x] = x;
             rank[x] = 0;
@@ -36,17 +39,18 @@ public:
     }
 
     // FIND-SET(x): retorna o representante do conjunto de x 
-    int FIND_SET(int x) {
+    int findSet(int x) {
         if (parent[x] != x) {
-            parent[x] = FIND_SET(parent[x]); 
+            parent[x] = findSet(parent[x]); 
         }
         return parent[x];
     }
 
-    // UNION(x, y): une os conjuntos de x e y (separados) com union by rank
+    // UNION(x, y): une os conjuntos de x e y (separados) com union 
+    // union e palavra reservada.
     void UNION(int x, int y) {
-        int repX = FIND_SET(x);
-        int repY = FIND_SET(y);
+        int repX = findSet(x);
+        int repY = findSet(y);
         if (repX == repY) return; // ja estao no mesmo conjunto
 
         // uniao por rank
@@ -112,9 +116,17 @@ private:
     uint vertices;
     std::vector<std::list<std::pair<uint, int>>> adj;
     std::vector<Edge> edges;
+    uint size;
 
 public:
     WeightedGraph(uint n) : vertices(n), adj(n) {}
+
+    void setSize(uint s){
+        size =s;
+    }
+    uint getSize()const{
+        return size;
+    }
 
     void addEdge(uint u, uint v, int w) {
         adj[u].emplace_back(v, w);
@@ -144,7 +156,7 @@ public:
 
     // Inicializa MAKE-SET para cada vertice
     for (uint i = 0; i < vertices; ++i) {
-        uf.MAKE_SET(i);
+        uf.makeSet(i);
     }
 
     // 2. Ordena arestas por peso
@@ -153,7 +165,7 @@ public:
 
     // 3. Itera pelas arestas
     for (const auto& edge : sortedEdges) {
-        if (uf.FIND_SET(edge.u) != uf.FIND_SET(edge.v)) {
+        if (uf.findSet(edge.u) != uf.findSet(edge.v)) {
             result.push_back(edge);
             uf.UNION(edge.u, edge.v);
         }
@@ -210,72 +222,196 @@ public:
         return total;
     }
 };
-WeightedGraph buildGraph(){
-    std::string line;
-    std::getline(std::cin,line);
-    int order,size;
-    std::istringstream iss(line);
-    std::string t;
-    std::vector<int> order_size;
+
+WeightedGraph buildGraph(uint order,uint size){
+    // Constroi o cerebro (Grafo grande)
 
     try{
-        // Captura os valores de ordem e tamanho para o Grafo
-        while(iss>>t){
-            try{
-                uint num = std::stoi(t);
-                order_size.push_back(num);
 
-            }catch(const std::invalid_argument& e){
-                throw std::runtime_error("Entrada invalida");
+        WeightedGraph g (order); // Constroi grafo de ordem que esta na entrada
 
-            }catch(const std::out_of_range& e){
-                throw std::runtime_error("Fora do limite int.");
-            }
-        }
-        
-        order = order_size[0];
-        size = order_size[1];
+        // Agora pra ler cada aresta
+        for(uint i = 0; i < size;i++){
+            char line[MAX_LINE];
+            std::cin.getline(line,MAX_LINE);
+            char* ptr = line;
+            std::vector<uint>edge;
 
-        WeightedGraph g(order); 
-        iss.clear(); // Limpa o buffer de entrada
-        iss.str(""); // redefine a string de entrada
-        t.clear(); // Limpa token
-        std::vector<uint> edge;
-        // Recebe cada aresta com peso da entrada
-        for(int i =0; i <size;++i){
-            std::getline(std::cin,line);
-            while (iss>>t){
-                try{
-                    uint num = std::stoi(t);
-                    edge.push_back(num); 
-                }catch(const std::invalid_argument& e){
-                    throw std::runtime_error("Entrada invalida");
+            while (*ptr !='\0'){
+                while (*ptr !='\0' && std::isspace(*ptr)) ++ptr;
+                if (*ptr == '\0') break;
+
+                char* endptr;
+                long num = std::strtol(ptr,&endptr,10);
+
+                if (endptr != ptr){
+                    if (num <0 || num >std::numeric_limits<uint>::max()){
+                        throw std::runtime_error("Numero fora dos limites uint.");
+
+                    }
+                    edge.push_back(static_cast<uint>(num));
+
+                }else{
+                    throw std::runtime_error("Valor invalido de aresta");
                 }
 
+                ptr = endptr;
             }
-            int u,v,w;
-            u = edge[0];
-            v =edge[1];
-            w = edge[2];
+            if (edge.size() <3){
+                throw std::runtime_error("Aresta esta incompleta (sem peso)");
+            }
+
+            uint u = edge[0];
+            uint v = edge[1];
+            uint w =edge[2];
+
             g.addEdge(u,v,w);
         }
         
-
         return g;
 
     }catch(const std::runtime_error& e){
-        std::cerr<<"Erro: " <<e.what()<< "\n";
+        std::cerr << "Erro: " << e.what() << "\n";
+    }  
+};
+std::vector<uint> getEntranceExit(){
+    // Function apenas pra pegar o valor de entrada e saida de um grafo Brain
+    char line[MAX_LINE];
+    std::cin.getline(line,MAX_LINE);
+    char* ptr = line;
+    std::vector<uint> entrance_exit;
+    while (*ptr != '\0'){
+        while (*ptr !='\0' && std::isspace(*ptr)) ++ptr;
+
+        if (*ptr == '\0') break;
+        char *endptr;
+
+        long num = std::strtol(ptr,&endptr,10);
+
+        if (endptr != ptr){
+            if (num <0 || num >std::numeric_limits<uint>::max()){
+                throw std::runtime_error("Numero fora dos limites uint.");
+
+            }
+            entrance_exit.push_back(static_cast<uint>(num));
+
+        }else{
+            throw std::runtime_error("Valor invalido de entrada e saida do grafo.");
+        }
+
+        ptr = endptr;
     }
+    return entrance_exit;
+   
+}
+std::vector<uint> getOrderSize(){
+    // Function apenas para pegar Ordem e Tamanho de um grafo qualquer.
+    char line[MAX_LINE];
+    std::cin.getline(line,MAX_LINE);
+    char* ptr = line;
+    std::vector<uint> order_size;
+    try{
+        while(*ptr !='\0'){
+            while(*ptr !='\0' && std::isspace(*ptr)) ++ptr;
 
+            if(*ptr =='\0') break;
 
+            char* endptr;
+            long num = std::strtol(ptr,&endptr,10);
 
+            if(endptr !=ptr){
+                if(num< 0 || num > std::numeric_limits<uint>::max()){
+                    throw std::runtime_error("Fora do limite uint");
+                
+                }
+                order_size.push_back(static_cast<uint>(num)); // Converte para UINT
+            } else{
+                throw std::runtime_error("Entrada invalida");
+            }
 
- 
+            ptr = endptr;
+        }
+
+        if(order_size.size() <2){
+            throw std::runtime_error("Entrada insuficiente para ordem e tamanho do grafo.");
+
+        }
+
+        return order_size;
+
+    }catch(const std::runtime_error& e){
+        std::cerr << "Erro: " << e.what() <<"\n";
+    }
+    return {};
+    
+}
+uint getIllNeurons(){
+    // Function que pega o numero de neuronios doentes.
+    uint illNeurons;
+    char line[MAX_LINE];
+    std::cin.getline(line,MAX_LINE);
+    char* ptr = line;
+    while (*ptr !='\0'){
+        while(*ptr !='\0' && std::isspace(*ptr)) ++ptr;
+        if (*ptr == '\0') break;
+        char* endptr;
+        long num = std::strtol(ptr,&endptr,10);
+        if(endptr !=ptr){
+            if(num< 0 || num > std::numeric_limits<uint>::max()){
+                throw std::runtime_error("Fora do limite uint");
+            }
+            illNeurons = num;
+        
+        }else{
+            throw std::runtime_error("Entrada invalida.");
+        }
+        ptr = endptr;
+    }
+    return illNeurons;
+}
+
+WeightedGraph buildBock(){
+    // Aqui se constroi cada minigrafo.
+    std::vector<uint> order_size = getOrderSize();
+    uint order,size;
+    order = order_size[0];
+    size = order_size[1];
+    // Pegar o numero de vertices doentes.
+    uint NumberIllNeurons = getIllNeurons();
+    if (NumberIllNeurons != 0 ){
+        std::vector<uint> illNeurons;
+        char line[MAX_LINE];
+        std::cin.getline(line,MAX_LINE);
+        char* ptr = line;
+        while (*ptr !='\0'){
+            while(*ptr !='\0' && std::isspace(*ptr)) ++ptr;
+            if (*ptr == '\0') break;
+            char* endptr;
+            long num = std::strtol(ptr,&endptr,10);
+            if(endptr !=ptr){
+                if(num< 0 || num > std::numeric_limits<uint>::max()){
+                    throw std::runtime_error("Fora do limite uint");
+                }
+                illNeurons.push_back(num);
+            
+            }else{
+                throw std::runtime_error("Entrada invalida.");
+            }
+            ptr = endptr;
+        }
+    }
+    WeightedGraph block = buildGraph(order,size);
+
+    return block;
+
+    
+
 
 };
 int main() {
-
-
+   
+    // TO DO: Usar <cstdlib> para converter String para inteiro com std::strtol()
+    // USAR CCTYPE E CSTDLIB
 
 return 0;
 }
