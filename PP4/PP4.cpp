@@ -119,7 +119,7 @@ private:
     uint size;
 
 public:
-    WeightedGraph(uint n) : vertices(n), adj(n) {}
+    WeightedGraph(uint n) : vertices(n), adj(n), size(0) {}
 
     void setSize(uint s){
         size =s;
@@ -129,6 +129,13 @@ public:
     }
 
     void addEdge(uint u, uint v, int w) {
+          if (u >= vertices || v >= vertices) {
+        throw std::out_of_range("Indice de vertice fora dos limites do grafo.");
+        }
+
+        if (u == v) {
+            throw std::runtime_error("Aresta de loop (u == v) nao permitida.");
+        }
         adj[u].emplace_back(v, w);
         adj[v].emplace_back(u, w); // grafo nao direcionado
         edges.push_back({u, v, w});
@@ -301,6 +308,9 @@ std::vector<uint> getEntranceExit(){
 
         ptr = endptr;
     }
+    if (entrance_exit.size() != 2)
+    throw std::runtime_error("Esperado dois valores (entrada e saida).");
+
     return entrance_exit;
    
 }
@@ -347,7 +357,7 @@ std::vector<uint> getOrderSize(){
 }
 uint getIllNeurons(){
     // Function que pega o numero de neuronios doentes.
-    uint illNeurons;
+    uint illNeurons=0;
     char line[MAX_LINE];
     std::cin.getline(line,MAX_LINE);
     char* ptr = line;
@@ -367,17 +377,22 @@ uint getIllNeurons(){
         }
         ptr = endptr;
     }
+    
+
     return illNeurons;
 }
 
-WeightedGraph buildBock(){
+WeightedGraph buildBlock(){
     // Aqui se constroi cada minigrafo.
     std::vector<uint> order_size = getOrderSize();
     uint order,size;
+    if (order_size.empty()) throw std::runtime_error("Erro ao ler ordem e tamanho");    
     order = order_size[0];
     size = order_size[1];
     // Pegar o numero de vertices doentes.
     uint NumberIllNeurons = getIllNeurons();
+   
+
     if (NumberIllNeurons != 0 ){
         std::vector<uint> illNeurons;
         char line[MAX_LINE];
@@ -399,6 +414,8 @@ WeightedGraph buildBock(){
             }
             ptr = endptr;
         }
+        if (illNeurons.size() != NumberIllNeurons) throw std::runtime_error("Quantidade de neuronios doentes diferente da esperada.");
+
     }
     WeightedGraph block = buildGraph(order,size);
 
@@ -409,9 +426,51 @@ WeightedGraph buildBock(){
 
 };
 int main() {
-   
-    // TO DO: Usar <cstdlib> para converter String para inteiro com std::strtol()
-    // USAR CCTYPE E CSTDLIB
+    try {
+        //  Le ordem e tamanho do grafo principal
+        std::vector<uint> brainOrderSize = getOrderSize();
+        uint brainOrder = brainOrderSize[0];
+        uint brainSize  = brainOrderSize[1];
 
-return 0;
+        // Le as arestas do grafo principal e constrói o grafo
+        WeightedGraph brain = buildGraph(brainOrder, brainSize);
+
+        // Le entrada e saida do grafo (para usar Dijkstra)
+        std::vector<uint> entrance_exit = getEntranceExit();
+        uint start = entrance_exit[0];
+        uint end = entrance_exit[1];
+
+
+        // Agora processa cada bloco (vértice com minigrafo)
+        std::vector<WeightedGraph> blocks;
+        for (uint i = 0; i < brain.vertexCount(); ++i) {
+            WeightedGraph block = buildBlock();  // usa internamente getOrderSize(), getIllNeurons(), buildGraph()
+            // Aqui armazena o bloco dentro do vértice correspondente
+        }
+
+        // Aplicar Dijkstra para encontrar o menor caminho
+        DijkstraSolver solver;
+        std::vector<uint> path = solver.findPath(brain,start,end);
+        if (path.empty()){
+            std::cerr << "Nao existe caminho entre os neuronios de entrada e saida.";
+            return 1;
+        }
+        // Calcula o peso total das MSTs visitadas pelo nano robo
+        int totalMSTWeight = 0;
+        for (uint vertex:path){
+            const WeightedGraph& block = blocks[vertex];
+            std::vector<Edge> mst = block.kruskalMST();
+
+            int sum = 0;
+            for (const auto& e: mst) sum += e.weight;
+            totalMSTWeight +=sum;
+        }
+
+        std::cout << totalMSTWeight<<std::endl;
+
+    } catch (const std::exception& e) {
+        std::cerr << "Erro durante o processamento: " << e.what() << std::endl;
+    }
+
+    return 0;
 }

@@ -108,6 +108,9 @@
     "streambuf": "cpp",
     "text_encoding": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "xhash": "cpp",
+    "xstring": "cpp",
+    "xutility": "cpp"
   }
 }
